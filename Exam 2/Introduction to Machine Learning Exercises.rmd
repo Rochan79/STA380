@@ -1,0 +1,1251 @@
+---
+title: "Introduction to Machine Learning Exercises"
+author: " Aishwarya Sarkar, Pratik Gawli, Aniket Patil, Rochan Nehete"
+date: '2022-08-15'
+output: pdf_document
+---
+
+# Question 1: Probability practice
+
+## Part A
+
+Visitors to your website are asked to answer a single survey question before they get access to the content on the page. Among all of the users, there are two categories: Random Clicker (RC), and Truthful Clicker (TC). There are two possible answers to the survey: yes and no. Random clickers would click either one with equal probability. You are also giving the information that the expected fraction of random clickers is 0.3. After a trial period, you get the following survey results: 65% said Yes and 35% said No. What fraction of people who are truthful clickers answered yes? Hint: use the rule of total probability.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+prob_truthful <- 0.7
+prob_random <- 1 - prob_truthful
+prob_yes <- 0.65
+prob_no <- 0.35
+prob_of_yes_given_random <- 0.5
+prob_of_no_given_random <- 0.5
+prob_yes_and_random <- prob_random*prob_of_yes_given_random
+prob_of_yes_and_truthful <- prob_yes - prob_yes_and_random
+prob_of_yes_given_truthful <- prob_of_yes_and_truthful/prob_truthful
+cat('Fraction of people who answered yes given that they are truthful speakers:',prob_of_yes_given_truthful)
+
+```
+
+## Part B
+
+Imagine a medical test for a disease with the following two attributes:
+
+The sensitivity is about 0.993. That is, if someone has the disease, there is a probability of 0.993 that they will test positive.
+The specificity is about 0.9999. This means that if someone doesn't have the disease, there is probability of 0.9999 that they will test negative.
+In the general population, incidence of the disease is reasonably rare: about 0.0025% of all people have it (or 0.000025 as a decimal probability).
+Suppose someone tests positive. What is the probability that they have the disease?
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+prob_of_postive_given_no_disease <- 0.0001
+#prob_of_negative_given_no_disease <- 0.9999
+prob_of_postive_given_disease <- 0.993
+
+#rule of total prob
+#prob_of_positive <- prob_of_postive_given_no_disease+ prob_of_postive_given_disease
+prob_of_disease <- 0.000025
+prob_of_no_disease <- 1 - prob_of_disease
+
+prob_of_disease_given_positive <- (prob_of_postive_given_disease*prob_of_disease)/((prob_of_postive_given_disease*prob_of_disease)+(prob_of_no_disease*prob_of_postive_given_no_disease))
+cat('Probability of having the disease given they test positive:',prob_of_disease_given_positive)
+```
+
+# Question 2: Wrangling the Billboard Top 100
+
+Consider the data in billboard.csv containing every song to appear on the weekly Billboard Top 100 chart since 1958, up through the middle of 2021. Each row of this data corresponds to a single song in a single week.
+
+## Part A:
+
+Make a table of the top 10 most popular songs since 1958, as measured by the total number of weeks that a song spent on the Billboard Top 100. Note that these data end in week 22 of 2021, so the most popular songs of 2021 will not have up-to-the-minute data; please send our apologies to The Weeknd.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(forcats)
+
+bill100 <- read.csv('billboard.csv')
+top10songs = bill100 %>%
+  group_by(performer, song) %>%
+  summarize(count = max(weeks_on_chart))%>%
+  arrange(desc(count))
+head(top10songs,10)
+```
+The above table shows the performers and their songs with a count of weeks for which that particular song was in the top 100 from 1958 to 2021. 
+
+## Part B:
+
+Is the "musical diversity" of the Billboard Top 100 changing over time? Let's find out. We'll measure the musical diversity of given year as the number of unique songs that appeared in the Billboard Top 100 that year. Make a line graph that plots this measure of musical diversity over the years. The x axis should show the year, while the y axis should show the number of unique songs appearing at any position on the Billboard Top 100 chart in any week that year. For this part, please filter the data set so that it excludes the years 1958 and 2021, since we do not have complete data on either of those years. Give the figure an informative caption in which you explain what is shown in the figure and comment on any interesting trends you see.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Data Wrangling, getting songs organized by year 
+uniquesongs = bill100 %>%
+  group_by(year) %>%
+  filter(year>=1958 & year<=2021) %>%
+  summarize(songs_in_one_year=length(unique(song)))
+
+#Plotting the Data
+ggplot(uniquesongs) + 
+  geom_line(aes(x=year, y=songs_in_one_year)) + 
+  ggtitle("Count of unique songs in the Hot 100") + 
+  labs(y = "Number of entries", x = "Years",) 
+
+```
+The above plot shows the level of diversity among the Billboard 100 songs from 1958 to 2021 with Number of entries as the metric to measure it. As evident from the plot, we can see diversity reahed its maximum around 1967 and from there it has been on a decline till the advent of the internet. 
+With the arrival of internet which brought the world closer, the diversity in billboard 100 songs has been on the rise, touching the level at which it was in the late 1960s.
+The decline which we can see from 1960s to 2000 could be attributes to same genres and artists making songs and making it to the top 100 list possibly  because of lack of diversity among music discovered across the world by then. But since 2000 we can see the graph ends on a high and we can expect it to grow even further moving into 2022 and beyond.
+
+## Part C:
+
+Let's define a "ten-week hit" as a single song that appeared on the Billboard Top 100 for at least ten weeks. There are 19 artists in U.S. musical history since 1958 who have had at least 30 songs that were "ten-week hits." Make a bar plot for these 19 artists, showing how many ten-week hits each one had in their musical career. Give the plot an informative caption in which you explain what is shown.
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+ten_week_hit = bill100 %>%
+  group_by(performer) %>%
+  filter(weeks_on_chart>=10) %>%
+  filter(length(unique(song))>=30) %>%
+  summarize(number_of_songs=length(unique(song)))
+
+ggplot(ten_week_hit) + 
+  geom_col(aes(fct_reorder(performer, number_of_songs), number_of_songs)) +
+  labs(x="Performer", y="Number of 10 week hits",title="Performers with 10 week hits")+ 
+         coord_flip()
+
+```
+The above plot shows the number of 10 week hits given by 19 artists who have atleast 30 songs in the 10 week hits list. Elton John is the only one who has crossed 50 such hits with Madonna at 2nd place with close to 45 hits.
+
+# Question 3: Visual story telling part 1: green buildings
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library (MASS)
+
+#attach(Boston)
+#install.packages('ISLR')
+#install.packages('glmnet')
+#install.packages('pcr')
+#install.packages('pls')
+library(ISLR)
+library(glmnet)
+library(pcr)
+library(pls)
+library(tidyverse)
+library(caret)
+library(leaps)
+#install.packages('leaps')
+
+#install.packages('caret')
+#install.packages('caTools')
+library(caTools)
+library(mosaic)
+```
+
+# 3-Visual story telling part 1: green buildings
+
+The case
+Over the past decade, both investors and the general public have paid increasingly close attention to the benefits of environmentally conscious buildings. There are both ethical and economic forces at work here. In commercial real estate, issues of eco-friendliness are intimately tied up with ordinary decisions about how to allocate capital. In this context, the decision to invest in eco-friendly buildings could pay off in at least four ways.
+
+Firstly, to fact check the Excel guru, I will calculate median rent for green buildings:
+```{r problem3, include=FALSE}
+green_buildings= read.csv('greenbuildings.csv')
+median(green_buildings$Rent[green_buildings$green_rating == 1])
+median(green_buildings$Rent[green_buildings$green_rating == 0])
+```
+
+Turns out the guru calculated his median correctly
+
+But in his analysis, I feel that he should've considered other variables before giving a conclusion.
+I shall firstly find out variables which are confounding with Rent by checking whether they are correlated to Rent or not using scatter plots
+
+#First approach - check for correlation between cooling days, heating days, degree days 
+``````{r, echo=FALSE, warning=FALSE, message=FALSE}
+green_buildings$green_rating = as.factor(green_buildings$green_rating)
+green_buildings$class_a = as.factor(green_buildings$class_a)
+green_buildings$class_b = as.factor(green_buildings$class_b)
+```
+``````{r, echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(green_buildings) + 
+	geom_point(aes(x=cd_total_07, y=Rent, color=green_rating)) +
+  labs(title="Rent of Green Status Buildings by no. of cooling days", 
+       y="Rent per SqFt ($)",
+       x = "No. of cooling days",
+       color="Green Status")
+```
+* green buildings have a higher rent across all kinds of cooling days (barring 1000-2000 days),so we can conclude that no of cooling days does not contribute to the rent of the building
+
+* No correlation observed between number of cooling days and rent
+
+```{r 3_heating days , include=FALSE}
+ggplot(green_buildings) + 
+	geom_point(aes(x=hd_total07, y=Rent, color=green_rating)) +
+  labs(title="Rent of Green Status Buildings by no. of heating days", 
+       y="Rent per SqFt ($)",
+       x = "No. of heating days",
+       color="Green Status")
+```
+From the graph we see that green_rated buildings charge a higher rent when:
+ * The no of heating degree days are high, implying that there is a need for heating on most days. This implies that     the savings in energy costs are higher for a green building, thereby having a higher rent
+ * No Correlation observed between number of heating days and Rent
+
+
+```{r ,include= FALSE}
+ggplot(green_buildings) + 
+	geom_point(aes(x=total_dd_07, y=Rent, color=green_rating)) +
+  labs(title="Rent of Green Status Buildings by no. of degree days", 
+       y="Rent per SqFt ($)",
+       x = "No. of degree days",
+       color="Green Status")
+```
+
+* We can now confidently say that places that have more than 4000q degree days (extreme temperatures), green buildings charge a higher rent. One possible reason for higher rent could be higher savings in energy costs. 
+
+We will now hold the degree days constant and check if it is a confounding variable for Rent for different intervals of degree days.
+
+It is possible that because buildings with degree days > 2000 are better built, and hence charge a premium rent
+
+holding degree days < 4000 constant
+
+```{r, include= FALSE}
+l <- green_buildings[which(green_buildings$total_dd_07 < 4000),]
+ggplot(l) + 
+	geom_point(aes(x=class_a,y=Rent, color=green_rating)) 
+
+ggplot(l) + 
+	geom_bar(aes(x=class_a, color=green_rating)) 
+
+bp <- ggplot(l, aes(x=green_rating, y=Rent, group=green_rating)) + 
+  geom_boxplot(aes(fill=green_rating))
+bp
+
+```
+This is telling us that there is almost equal rent associated with a green building and non green building, if it is class_a and in an area with degree days < 4000
+
+Now we will try for >4000 and <8000
+
+``````{r, echo=FALSE, warning=FALSE, message=FALSE}
+l <- green_buildings[which(green_buildings$total_dd_07 > 4000 & green_buildings$total_dd_07 < 8000),]
+ggplot(l) + 
+	geom_point(aes(x=class_a,y=Rent, color=green_rating)) 
+
+ggplot(l) + 
+	geom_bar(aes(x=class_a, color=green_rating)) 
+
+bp <- ggplot(l, aes(x=green_rating, y=Rent, group=green_rating)) + 
+  geom_boxplot(aes(fill=green_rating))+ ggtitle("Green Rating vs Rent for > 4000 & < 8000 degree days")
+bp
+
+```
+
+the Rent is comparable for moderate degree days conditions, now we will check for extreme conditions where there are  more than 8000 degree days. 
+
+``````{r, echo=FALSE, warning=FALSE, message=FALSE}
+l <- green_buildings[which(green_buildings$total_dd_07 > 8000),]
+ggplot(l) + 
+	geom_point(aes(x=class_a,y=Rent, color=green_rating)) 
+
+ggplot(l) + 
+	geom_bar(aes(x=class_a, color=green_rating)) 
+
+bp <- ggplot(l, aes(x=green_rating, y=Rent, group=green_rating)) + 
+  geom_boxplot(aes(fill=green_rating)) + ggtitle("Green Rating vs Rent for > 8000 degree days")
+bp
+
+```
+
+Here we can again confirm that we see rent for green buildings higher for class a
+In all areas with greater than > 8000 degree days, we see that across the class of the buildings, the rent is higher for green_rated buildings. 
+
+
+Comparing boxplots we can conclude that degree days is a confounding variable which should've been a part of the guru's analysis and  we should invest in a green building if they are going to be built in areas with a high number of degree days (>8000), ie areas with extremes of temperature.
+
+
+```{r out.width=c('50%', '50%'), fig.show='hold', echo=FALSE}
+g = ggplot(green_buildings, aes(x=age))
+g + geom_density(aes(fill=factor(green_rating)))+
+  labs(x="Age", y='Density', title = 'Distribution of age',
+       fill='Green building')
+ggplot(green_buildings, aes(class_a, ..count..)) + geom_bar(aes(fill = green_rating), position = "dodge")+
+  labs(x="Class a", y='Number of buildings', title = 'Class A vs Green Buildings',
+       fill='Green building')
+g = ggplot(green_buildings, aes(x=size))
+g + geom_density(aes(fill=factor(green_rating)))+
+  labs(x="Size", y='Density', title = 'Size distribution',
+       fill='Green building')
+medians_class_a_gb <- aggregate(Rent ~  class_a, green_buildings, median)
+ggplot(data=green_buildings, aes(x=factor(class_a), y=Rent, fill=class_a)) + geom_boxplot()+
+  stat_summary(fun=median, colour="darkred", geom="point", 
+               shape=18, size=3,show.legend = FALSE) + 
+  geom_text(data = medians_class_a_gb, aes(label = Rent, y = Rent)) +
+  labs(x="Class A", y='Rent', title = 'Rent vs Class a',
+       fill='Class A')
+```
+Observations:
+Most of the green buildings are newly built as compared to non-green buildings. There are more class a buildings in green buildings than non-class a buildings. More number of green buildings have higher size than non-green buildings. There is a  difference in the  rent of class a and non-class a buildings,class a buildings charging more rent. 
+
+### Conclusion: 
+
+We can conclude that the guru should've taken other variables such as number of degree days, class a b into his consideration. 
+
+It would've been financially more feasible if the building is a class a building built in areas with higher number of degree days / more extreme weather conditions, thereby convincing renters to pay higher rent in expectations of having higher savings. 
+
+# Question 4: Visual story telling part 2: Capital Metro data
+
+In this exercise, we dive into the Capital metro ridership data to uncover trends in ridership over a period of 6 months. For starters, we look at the basic statistical summary of data to catch some low-hanging fruits.
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+capmetro <- read.csv('capmetro_UT.csv')
+summary(capmetro)
+capmetro$timestamp <- as.POSIXct(capmetro$timestamp,tz=Sys.timezone())
+capmetro$timestamp_date <- as.Date(capmetro$timestamp)
+
+```
+
+```{r, include=FALSE, fig.height=6, fig.width=18}
+df_cap_month = capmetro %>% group_by(month,weekend,hour_of_day)  %>%
+                    summarise(total_boarding = sum(boarding),
+                              total_alighting = sum(alighting),
+                              avg_temp= mean(temperature),
+                              
+                              .groups = 'drop')
+
+ggplot(df_cap_month, aes(month, total_boarding, fill = weekend, group = hour_of_day)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.5, size = 4) +
+  geom_text(aes(label = hour_of_day, y = 0),
+            position = position_dodge(width = 0.8),
+            vjust = 1.5)+ggtitle("Monthly Boarding trend")
+
+```
+For all 3 months, we can see that weekdays have more boarding than weekends. More boarding is observed in the middle of the day between 12pm to 6pm, this might be the time when the buses are in most use. 
+
+An observation I see while traveling on the buses is their advertisement : come in, cool off. Maybe because temperatures are more during the afternoon, people tend to use buses 
+We will check to see if the temperature graph for a month aligns with this
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+df_cap_month_Sep = capmetro %>% group_by(month,weekend,hour_of_day)  %>%
+                    summarise(total_boarding = sum(boarding),
+                              total_alighting = sum(alighting),
+                              avg_temp= mean(temperature),
+                              
+                              .groups = 'drop') %>% filter(month == "Sep")
+ggplot(df_cap_month_Sep, aes(month, avg_temp, fill = weekend, group = hour_of_day )) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.5, size = 4) +
+  geom_text(aes(label = hour_of_day, y = 0),
+            position = position_dodge(width = 0.8),
+            vjust = 1.5)+ggtitle("Temperature trend")+labs(x="Month", y="Temperature")
+
+```
+As we can see, the temperatures are more during the same time period boarding is at its peak. This concludes that temperatures along with the advertisement compels people to board more during the afternoon.
+
+
+```{r, include=FALSE, fig.height=6, fig.width=18}
+capmetro$filling <- capmetro$boarding - capmetro$alighting
+
+ggplot(capmetro, aes(capmetro$month, capmetro$filling, group = capmetro$hour_of_day, fill=weekend)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.5, size = 4) +
+  geom_text(aes(label = capmetro$hour_of_day, y = 0),
+            position = position_dodge(width = 0.8),
+            vjust = 1.5)+ggtitle("Monthly Boarding-Alighting trend")
+```
+In morning, boarding-alighting is negative. Hence we can infer that the buses would be empty between time
+
+
+
+```{r, include=FALSE, fig.height=6, fig.width=18}
+
+ggplot(capmetro, aes(capmetro$month, capmetro$temperature, group = capmetro$hour_of_day)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.5, size = 4) +
+  geom_text(aes(label = capmetro$hour_of_day, y = 0),
+            position = position_dodge(width = 0.8),
+            vjust = 1.5)
+```
+
+```{r, include=FALSE,fig.height=6, fig.width=18}
+
+ggplot(capmetro, aes((capmetro$timestamp_date), capmetro$boarding, fill=weekend)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.5, size = 4)+labs(x="Month", y="Boarding")+ggtitle("Overall daily boarding trend")
+```
+Here is the total line trend of boarding. We see a continuous pattern in the boarding trend, one exception being a prolonged drop in boarding in late November. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+bd <- ggplot(capmetro, aes(x=capmetro$hour_of_day, y=capmetro$boarding, group=capmetro$hour_of_day)) + 
+    geom_boxplot(aes(fill=capmetro$hour_of_day)) + ggtitle("Boarding box plots")+labs(x="Hour of day", y="Boarding")
+al <- ggplot(capmetro, aes(x=capmetro$hour_of_day, y=capmetro$alighting, group=capmetro$hour_of_day)) + 
+    geom_boxplot(aes(fill=capmetro$hour_of_day)) + ggtitle("Alighting box plots")+labs(x="Hour of day", y="Alighting")
+bd
+al
+```
+Boarding is at its peak in the middle of the day, alighting is at its peak at the start of the day.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+bp <- ggplot(capmetro, aes(x=capmetro$month, y=capmetro$temperature, group=capmetro$month)) + 
+  geom_boxplot(aes(fill=capmetro$month)) + ggtitle("Temperature by months")
+bp
+```
+Average temperature is highest in Sep, followed by Oct and Nov
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+par(mfrow=c(1,2))
+hist(capmetro$boarding, main="Boarding")
+hist(capmetro$alighting,main="Alighting")
+```
+
+There are also some instances where more than 200 people are either boarding or alighting
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+high_freq =  capmetro[which(capmetro$boarding > 200 | capmetro$alighting > 200),]
+bd <- ggplot(high_freq, aes(x=high_freq$hour_of_day, y=high_freq$boarding, group=high_freq$hour_of_day)) + 
+    geom_boxplot(aes(fill=high_freq$hour_of_day)) + ggtitle("Boarding box plots")
+al <- ggplot(high_freq, aes(x=high_freq$hour_of_day, y=high_freq$alighting, group=high_freq$hour_of_day)) + 
+    geom_boxplot(aes(fill=high_freq$hour_of_day)) + ggtitle("Alighting box plots")
+bd
+al
+```
+High boarding(>200) happens usually around 3pm and high alighting happens usually around  8:30am
+
+# Question 5: Portfolio modeling
+
+In this problem, you will construct three different portfolios of exchange-traded funds, or ETFs, and use bootstrap resampling to analyze the short-term tail risk of your portfolios.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(mosaic)
+library(quantmod)
+library(foreach)
+```
+
+We have selected 7 ETFs from the following categories in the ETF database:
+* 1. Mid Cap Growth Equities ETFs: IJH
+* 2.Diversified ETFs: DWAT
+* 3. Corporate Bonds ETFs: IBCE
+* 4. Vanguard S&P 500 ETF: VOO 
+* 5. Oil and gas ETFs: USO,UNG
+* 6. All cap equities ETF: SDY
+
+We will create 3 portfolios, one equally balanced across the above listed ETFs, one with more bias towards non-commodity market ETFs(IBCE, IJH, DWAT, VOO, SDY) and third with more bias towards commodity market ETFs (USO,UNG).
+
+## Preprocessing
+
+We've considered the past data of 5 years, i.e. starting January 2017 and all these ETFs have data for this range, providing necessary data for analysis.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Import a few stocks
+myefts = c("IJH", "DWAT", "SDY", "UNG","IBCE","VOO", "USO" )
+getSymbols(myefts, from='2017-01-01')
+for(ticker in myefts) {
+  expr = paste0(ticker, "a = adjustOHLC(", ticker, ")")
+  eval(parse(text=expr))
+}
+```
+Volatility of the ETFs across the 5 year period.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Volatility check
+
+plot(ClCl(IBCEa), type='l')
+plot(ClCl(USOa), type='l')
+plot(ClCl(IJHa), type='l')
+plot(ClCl(DWATa), type='l')
+plot(ClCl(SDYa), type='l')
+plot(ClCl(VOOa), type='l')
+plot(ClCl(UNGa), type='l')
+
+```
+
+Print close to close changes for some of adjusted ETFs: 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+plot(ClCl(IBCEa))
+plot(ClCl(USOa))
+plot(ClCl(IJHa))
+plot(ClCl(DWATa))
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# combining all returns in the return matrix
+all_returns = cbind(ClCl(IJHa),
+                     ClCl(DWATa),
+                     ClCl(SDYa),
+                     ClCl(UNGa),
+                     ClCl(IBCEa),
+                     ClCl(VOOa),
+                     ClCl(USOa))
+all_returns = as.matrix(na.omit(all_returns))
+head(all_returns)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# checking the correlation
+par(mfrow=c(1,2))
+pairs(all_returns)
+writeLines('\n')
+plot(all_returns[,1], type='l')
+```
+Plotting the pairwise plots of these ETFs, we can see a strong correlation among them. But it is linear for some and non-linear in some cases. A huge spike can be seen in the all_returns plot around 2020, (Beginning of the pandemic).
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+initial_wealth = 100000
+```
+
+## Simulations
+
+Task:
+With a capital of $100,000,
+Use bootstrap resampling to estimate the 4-week (20 trading day) value at risk of each of your three portfolios at the 5% level.
+Write a report summarizing your portfolios and your VaR findings.
+
+Portfolio 1 : Equal weight
+Results: 
+Initial wealth: 100000
+Average Final Wealth over 20 days :100427.7
+Average Profit:427.7061
+Value at risk of 5% level: 7912.454 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(18)
+sim1 = foreach(i=1:5000, .combine = 'rbind') %do% {
+  total_wealth = initial_wealth
+  weights = c(0.14,0.14,0.14,0.14,0.14,0.14,0.16)
+  holdings = weights * total_wealth
+  n_days = 20
+  wealthtracker = rep(0, n_days)
+  for(today in 1:n_days) {
+    return.today = resample(all_returns, 1, orig.ids=FALSE)
+    holdings = holdings + holdings*return.today
+    total_wealth = sum(holdings)
+    wealthtracker[today] = total_wealth
+    holdings = total_wealth * weights #rebalancing each day at zero transaction cost
+  }
+  wealthtracker
+}
+par(mfrow=c(1,2))
+head(sim1)
+hist(sim1[,n_days], 20)
+
+plot(density(sim1[,n_days]))
+# Profit/loss
+meanwealth1=mean(sim1[,n_days])
+profloss1=mean(sim1[,n_days] - initial_wealth)
+hist(sim1[,n_days]- initial_wealth, breaks=30)
+
+var1=quantile(sim1[,n_days]- initial_wealth, prob=0.05)
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+wealthbydaysim1 = c()
+days = 1:n_days  
+for (i in 1:n_days){
+    wealthbydaysim1[i] = mean(sim1[,i]) 
+}
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+plottingdf1 = data.frame(wealthbydaysim1, days)
+ggplot(data=plottingdf1, aes(x=days, y=wealthbydaysim1, group=1)) +geom_line(color="blue")+geom_point() +xlab('Days') +ylab('Return of investments') + ggtitle('Equal Portfolio returns for 20 days')
+```
+
+
+Portfolio 2 : More Bias in weights for non-commodity market ETFs
+80% weightage among  IBCE, IJH, DWAT, VOO, SDY
+20% weightage among UNG, USO
+Results: 
+Initial wealth: 100000
+Average Final Wealth over 20 days :100348.7
+Average Profit:348.6563
+Value at risk of 5% level: 8389.12  
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(18)
+sim2 = foreach(i=1:5000, .combine = 'rbind') %do% {
+  total_wealth = initial_wealth
+  weights = c(0.16,0.16,0.16,0.1,0.16,0.16,0.1)
+  holdings = weights * total_wealth
+  n_days = 20
+  wealthtracker = rep(0, n_days)
+  for(today in 1:n_days) {
+    return.today = resample(all_returns, 1, orig.ids=FALSE)
+    holdings = holdings + holdings*return.today
+    total_wealth = sum(holdings)
+    wealthtracker[today] = total_wealth
+    holdings = total_wealth * weights #rebalancing each day at zero transaction cost
+  }
+  wealthtracker
+}
+par(mfrow=c(1,2))
+head(sim2)
+hist(sim2[,n_days], 20)
+
+plot(density(sim1[,n_days]))
+# Profit/loss
+meanwealth2=mean(sim2[,n_days])
+profloss2=mean(sim2[,n_days] - initial_wealth)
+hist(sim2[,n_days]- initial_wealth, breaks=30)
+
+var2=quantile(sim2[,n_days]- initial_wealth, prob=0.05)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+wealthbydaysim2 = c()
+days = 1:n_days  
+for (i in 1:n_days){
+    wealthbydaysim2[i] = mean(sim2[,i]) 
+}
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+plottingdf2 = data.frame(wealthbydaysim2, days)
+ggplot(data=plottingdf2, aes(x=days, y=wealthbydaysim2, group=1)) +geom_line(color="blue")+geom_point() +xlab('Days') +ylab('Return of investments') + ggtitle('Non commodity market heavy portfolio returns for 20 days')
+```
+
+
+Portfolio 3 : More Bias in  weights for Commodity Market ETFs:
+80% weightage among UNG, USO 
+20% weightage among IBCE, IJH, DWAT, VOO, SDY
+Results: 
+Initial wealth: 100000
+Average Final Wealth over 20 days :100789.7
+Average Profit:789.7232
+Value at risk of 5% level: 6226.687
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(18)
+sim3 = foreach(i=1:5000, .combine = 'rbind') %do% {
+  total_wealth = initial_wealth
+  weights = c(0.04,0.04,0.04,0.4,0.04,0.04,0.4)
+  holdings = weights * total_wealth
+  n_days = 20
+  wealthtracker = rep(0, n_days)
+  for(today in 1:n_days) {
+    return.today = resample(all_returns, 1, orig.ids=FALSE)
+    holdings = holdings + holdings*return.today
+    total_wealth = sum(holdings)
+    wealthtracker[today] = total_wealth
+    holdings = total_wealth * weights #rebalancing each day at zero transaction cost
+  }
+  wealthtracker
+}
+par(mfrow=c(1,2))
+head(sim3)
+hist(sim3[,n_days], 20)
+
+plot(density(sim1[,n_days]))
+# Profit/loss
+meanwealth3=mean(sim3[,n_days])
+profloss3=mean(sim3[,n_days] - initial_wealth)
+hist(sim3[,n_days]- initial_wealth, breaks=30)
+
+var3=quantile(sim3[,n_days]- initial_wealth, prob=0.05)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+wealthbydaysim3 = c()
+days = 1:n_days  
+for (i in 1:n_days){
+    wealthbydaysim3[i] = mean(sim3[,i]) 
+}
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+plottingdf3 = data.frame(wealthbydaysim3, days)
+ggplot(data=plottingdf3, aes(x=days, y=wealthbydaysim3, group=1)) +geom_line(color="blue")+geom_point() +xlab('Days') +ylab('Return of investments') + ggtitle('Commodity market heavy portfolio returns for 20 days')
+```
+
+## Summarizing all three portfolios:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+plottingdf4 <- merge(plottingdf1, plottingdf2)
+plottingdf5<- merge(plottingdf3, plottingdf4)
+plottingdf5
+plottingdf5 = rename(plottingdf5,c("Equally balanced"="wealthbydaysim1","Non Commodity heavy"="wealthbydaysim2","Commodity heavy"="wealthbydaysim3"))
+df <- reshape2::melt(plottingdf5 ,  id.vars = 'days', variable.name = 'series')
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(df, aes(days, value)) +xlab('Days') +ylab('Return of investments')+
+  geom_line(aes(colour = series))
+
+Portfolio_Type= c("Equally Balanced", "Non Commodity Heavy", "Commodity Heavy")
+Mean_Wealth = c(meanwealth1, meanwealth2, meanwealth3)
+Profit_Loss = c(profloss1, profloss2, profloss3)
+Value_at_Risk = c(var1, var2, var3)
+summaryofportfolios =  data.frame(Portfolio_Type,Mean_Wealth, Profit_Loss , Value_at_Risk)
+summaryofportfolios
+```
+
+## Insights and Conclusions:
+
+The above graph and the summary statistics table show the wealth value over 20 days and the variables calculated for these three portfolios.
+Considering the past performance of these stocks for 5 years,we have predicted the mean value, profit / loss and their value at risk at 5 %. The findings are as expected. The numbers are in line with what can be expected in a real-life scenario. 
+
+Firstly, the equally balanced portfolio gives a profit of 385 over 20 days which is not that high, but ensures a steady growth of wealth.The amount which we can expect to lose 5 percent of the time is 8209, which is less than 10 percent of the total wealth at the start. So if an investor is willing to take that level of risk, he/she can take up the equally balanced portfolio because based on the past 5 year performance, he is most likely to gain a reasonable amount within the term of analysis.
+
+Furthermore, the portfolio with Non-commodity heavy ETFs gives a profit of 532 which is the highest of the three portfolios as expected because this portfolio lays more bias on the more diverse set of ETFs which also in turn reduces the VAR down to 6869, which is close to 7%. So based on our analysis, this portfolio would be the best one to take up, giving more returns accompanied with a lower risk level as well.
+
+On the contrary, with the portfolio with more bias towards commodity based ETFs, we can see a decline in wealth in contrast to the growth observed in the first two portfolios. This is as expected for two reasons: Firstly, as the commodity market is more volatile, the investment can go down over a short term as there are a large number of variables affecting the ETF prices. Secondly, as this portfolio is more biased towards one type of ETFs. So, if the commodity market goes down, the other ETFs are not able to make up for the loss experienced in the commodity market ETFs because of having low weightage. Hence, the value at risk is also high for this portfolio (close to 15.5%). 
+So, clearly, it would  not be advisable to take up a portfolio 3 or a similar portfolio like the third one which would be biased towards one particular market ETFs, especially in volatile markets like the commodities. As seen in the real life and our analysis as well, equally balanced and non commodity market bias portfolios perform better.
+
+# Question 6: Clustering and PCA
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Clustering and PCA
+
+Reading the wine.csv and retaining only first 11 variables for analysis, i.e. clustering and applying PCA.
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+wine <- read.csv('wine.csv')
+X= wine[, 1:11]
+```
+
+Scale data and extract centre and scale from it to be effective to calculate distances whiile clustering
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+X= scale(X, center=TRUE, scale= TRUE)
+c = attr(X,"scaled:center")
+s = attr(X,"scaled:scale")
+```
+
+To run the clustering, we selected K means clustering algorithm starting with K = 2, one for type of wine to be clustered and nstarts = 10 to attempt with 30 different cluster centers in order to select the one with the least variance.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(18)
+kmeanscluster = kmeans(X, 2, nstart=30)
+```
+Assign the cluster determined by kmeans to individual rows and plotting with respect to x=fixed.acidity, y=citric.acid to see if clusters formed:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+wine$cluster <- as.character(kmeanscluster$cluster)
+head(wine)
+ggplot() +
+  geom_point(data = wine, 
+             mapping = aes(x=fixed.acidity, y=citric.acid,colour = cluster))
+```
+Get average values of all 11 characteristics for the two types of wines. i.e. red and white:
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+k=wine%>%
+  group_by(color)%>%
+  summarize_all(mean)
+head(k)
+kmeanscluster$center[1,]*s + c
+kmeanscluster$center[2,]*s + c
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+wine[kmeanscluster$cluster==1, 'cluster'] <- "red"
+wine[kmeanscluster$cluster==2, 'cluster'] <- "white"
+classmatrix = xtabs(~color+cluster, data=wine) 
+print(classmatrix)
+sum(diag(classmatrix))/sum(classmatrix)
+```
+As we can see in the classification matrix, we are able to cluster 98.5% of the data correctly using Kmeans clustering. 
+Next we apply PCA as a dimensionality reduction method for this dataset:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(18)
+X= wine[, 1:11]
+X= scale(X, center=TRUE, scale= TRUE)
+winepca = prcomp(X, scale= TRUE)
+summary(winepca)
+round(winepca$rotation[,1:5], 5)
+scores = winepca$x[,1:5]
+scores[10,1:5]
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(18)
+clusterpca = kmeans(scores, 2, nstart=30)
+qplot(scores[,1], scores[,2], data=wine, color=factor(clusterpca$cluster))
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+wine[clusterpca$cluster==1, 'cluster'] <- "red"
+wine[clusterpca$cluster==2, 'cluster'] <- "white"
+classmatrix = xtabs(~color+cluster, data =wine) 
+print(classmatrix)
+sum(diag(classmatrix))/sum(classmatrix)
+```
+As we can see above, the classification ratio in the class matrix is 98.4 i,e, close to 98.5 which was obtained during Kmeans algorithm. Hence we conclude that dimensionality reduction in this scenario is performing as well as kmeans clustering and is giving almost the same results with less number of predictors i.e. PCA components.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+unique(wine$quality)
+kmeansclusterforquality = kmeans(X, 7, nstart=30)
+classmatrixforquality = xtabs(~wine$quality + kmeansclusterforquality$cluster)
+print(classmatrixforquality)
+sum(diag(classmatrixforquality))/sum(classmatrixforquality)
+```
+
+As we can see in the above table, the unique values for quality of wine in our data set is 3 to 9, which are 7 different values. So if we use a 7 class Kmeans clustering, the accuracy comes out to be only 11 percent. Hence, kmeans clustering does not seem to perform very well on determining quality of the wine. This possibly could be attributed to the fact that ratings given by the panel to that particular wine are purely based on its taste and not its chemical compositions proportions. For eg. 2 wines with contrasting proportions might end up having a taste which the panel rated as 9. Hence, the clustering algorithm performs poorly on determining the quality of the wine.
+
+# Question 7: Market Segmentation
+
+We want to understand the social media audience of a large consumer brand NutrientH20 so that they can tailor their messaging to their liking. The data on the  audience includes annotated tweets of NutrientH20's Twitter followers bucketed into 36 unique categories over a seven-day period collected by a market-research study.
+
+
+## Clustering using K-Means++
+Kmeans++ clustering achieves our objective by chunking similar audience in clusters which can be given personas to identify the broad meaning of each cluster and form market segments. We chose Kmeans++ over Kmeans since the latter chooses intial points for cluster centroids randomly.
+
+Before clustering our data, we removed the following variables, as they would not provide any beneficial insight to our problem and: chatter, uncategorized, adult, and spam.
+
+## (a)
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(ClusterR)
+df = read.csv('social_marketing.csv')
+
+# Make user identifier index
+df = data.frame(df[,-1], row.names = df[,1])
+
+#removed user code, chatter, uncategorized, adult, and spam columns
+X = df[,-c(1,2,6,36,37)]
+# center and scale the data
+X = scale(X, center=TRUE, scale=TRUE)
+# Extract the centers and scales from the rescaled data
+mu = attr(X,"scaled:center")
+sigma = attr(X,"scaled:scale")
+
+numClusters = c(2:15)
+  wss_all = NULL
+  set.seed(123)
+  for(c in numClusters){
+    wss = sum(mean(KMeans_rcpp(X, clusters = c, num_init = 25, max_iters = 100, initializer = 'kmeans++')$WCSS_per_cluster))
+    wss_all <- c(wss_all, wss)
+  }
+#plotting the WSS by choosing various K's
+plot(numClusters, wss_all, type = 'b',
+     xlab = "Number of Clusters", ylab = "Within-Cluster Sum of Squares", 
+     main = "WSS vs Number of Clusters")
+
+```
+
+### Choosing the Number of Clusters
+Kmeans requires choosing the number of clusters beforehand, and it is difficult to speculate on the optimum number of clusters. We use the Elbow method that visualizes the within-cluster sum of squares (WSS) distance against the number of clusters. Looking at the plot, we choose the clusters so that adding more clusters does not add much improvement to the WSS.
+
+Looking at the elbow plot above, we'll use 6 clusters for our analysis.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(27)
+clust = KMeans_rcpp(X, clusters = 6, num_init = 25, max_iters = 100, initializer = 'kmeans++')
+cluster.prop = clust$obs_per_cluster/sum(clust$obs_per_cluster)
+
+```
+
+### Cluster 1
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::kable(head(sort((clust$centroids[1,]*sigma + mu), decreasing=TRUE)), digits = 2)
+cat('Percentage of total followers: ', cluster.prop[1]*100)
+```
+**Parents:** With interests such as sports fandom, religion, food, parenting, and school, this segment represents the parents archetype. 9% of their
+
+
+### Cluster 2
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::kable(head(sort((clust$centroids[2,]*sigma + mu), decreasing=TRUE)), digits = 2)
+cat('Percentage of total followers: ', cluster.prop[2]*100)
+```
+**College-goers:** With college & online gaming the predominant categories, this cluster represents the college-goers archetype. Tweets about college dominates this segment so the brand can possibly run campaigns in their universities to increase their outreach.
+
+
+### Cluster 3
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::kable(head(sort((clust$centroids[3,]*sigma + mu), decreasing=TRUE)), digits = 2)
+cat('Percentage of total followers: ', cluster.prop[3]*100)
+```
+**Influencers:** With health photo-sharing, shopping, health & fitness as the predominant categories, this cluster represents the Influencers archetype. They form the majority of the brand's follower signifying that the brand has many ambassadors.
+
+
+
+### Cluster 4
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::kable(head(sort((clust$centroids[4,]*sigma + mu), decreasing=TRUE)), digits = 2)
+cat('Percentage of total followers: ', cluster.prop[4]*100)
+```
+**Health Conscious:** With health & nutrition, fitness and cooking as the predominant categories, this cluster represents the Health Conscious archetype. They are careful about the products they use and possibly espouse them on social media. The brand can focus on increasing followers belonging to this cluster as they can provide good word-of-mouth publicity for their products. Currently, this cluster contains second-highest number of followers, after the Influencer cluster.
+
+
+### Cluster 5
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::kable(head(sort((clust$centroids[5,]*sigma + mu), decreasing=TRUE)), digits = 2)
+cat('Percentage of total followers: ', cluster.prop[5]*100)
+```
+**Working class:** With politics, travel, and news as the predominant categories, this cluster represents the Working Class archetype. They travel frequently, either for work or for vacations. Either ways, this group tends to have high spending capacity and the brand can market high margin products to this group of followers.
+
+
+### Cluster 6
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::kable(head(sort((clust$centroids[6,]*sigma + mu), decreasing=TRUE)), digits = 2)
+cat('Percentage of total followers: ', cluster.prop[6]*100)
+```
+**Chefs:** With food and photo-sharing as the predominant categories, this cluster represents the Chef archetype. They are fond of sharing recipes and cooking tips and possibly share a lot of food pictures. The NutrientH20 brand can market their consumer packaged goods product line to appeal to this group. They are also likely to retweet photos that the brand tweets about.
+
+
+## Market Segments
+
+1) **Parents**
+2) **College-goers**
+3) **Influencers**
+4) **Health Conscious**
+5) **Working Class**
+6) **Chefs**
+
+NutrientH20 can run various tailored marketing campaigns on twitter according to these market segments to ensure their followers relate to the content and drive more followers in each segment!
+
+# Question 8: The Reuters corpus
+
+Question: We will try to find the author of a given article based on the style of vocabulary used in the article. Further, we want to analyze which authors are most similar by looking at the probabilities of our classification model.
+
+Approach: We break down our analysis into below sequential tasks -
+
+1. Read in the raw data and pre-process it to make it easier for classification model to extract signal (consistent casing, stop word removal, etc.)
+2. Create target column out of file names
+3. Extract numerical features from text data by creating a TF-IDF matrix
+4. Perform PCA dimensionality reduction to compress the features and wash out white noise
+5. Develop classification models from the resulting features and analyze model parameters and output for interesting trends.
+
+Details of the approach given below -
+
+## Pre-processing -
+
+* Includes stop words removal, tokenization and consistency of casing, special characters removal, and space-like character consistency.
+
+## Text representation -
+
+* We have created a document-term matrix (DTM) where the words in the documents are the columns and each document is a row. Standardization of the DTM is done using TF-IDF, meaning that each word is represented as a TF-IDF value.
+
+## Handling out-of-vocabulary (OOV) words -
+
+* OOV words are the ones which are present in test set but not in the tran set, so our models cannot deal with them. Since there are many such words in the dataset, we decided to remove all OOV words from the test dataset and only keep the ones common in both the datasets. This means that our model needs to be trained periodically if it is deployed in production.
+
+## Dimensionality reduction -
+
+* The resulting document-term-matrix (DTM) contains huge number of variables/words which can make the model complex and slow to train. We reduce the dimension of the DTM using Principal Component Analysis.
+Since there are hundreds of words (variables) in the training and test dataset, it is better to reduce the number of variables using principal component analysis. 
+
+Result: 
+
+## Principal Component Analysis
+The PCA shows that 400 principal components explain almost 80% of the variance. So we reduce our original matrix of 314k features to 400 features, giving a compression ratio of 99%.
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tm) 
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(Rcpp)
+library(slam)
+library(magrittr)
+library(proxy)
+library(class)
+library(e1071)
+
+readerPlain = function(fname){
+				readPlain(elem=list(content=readLines(fname)), 
+							id=fname, language='en') }
+#Read in all the train documents
+train_folders=Sys.glob('ReutersC50/C50train/*')
+#making a vector with author names getting all the file names
+all_files=NULL
+labels=NULL
+for (x in train_folders) { 
+    ix = tail(unlist(gregexpr('C50train', x)), n=1)
+    author_name=substring(x,first=ix+9)
+  article=Sys.glob(paste0(x,'/*.txt'))
+  all_files=append(all_files,article)
+  labels=append(labels,rep(author_name,length(article)))
+}
+#removing .txt from files
+files_combined = lapply(all_files, readerPlain) 
+names(files_combined) = all_files
+#Make corpus
+articles_raw = Corpus(VectorSource(files_combined))
+
+```
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+##Pre-processing and tokenization
+documents = articles_raw %>%
+  tm_map(content_transformer(tolower))  %>%             # make everything lowercase
+  tm_map(content_transformer(removeNumbers)) %>%        # remove numbers
+  tm_map(content_transformer(removePunctuation)) %>%    # remove punctuation
+  tm_map(content_transformer(stripWhitespace))          # remove excess white-space
+#remove stop words
+documents = tm_map(documents, content_transformer(removeWords), stopwords("en"))
+#Creating document-term matrix
+DTM_train = DocumentTermMatrix(documents)
+#remove sparse terms
+DTM_train = removeSparseTerms(DTM_train, 0.95)
+#TF-IDF matrix
+train_tf_idf_mat = weightTfIdf(DTM_train)
+DTM_train = as.matrix(train_tf_idf_mat)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#reading all the sub-folders in the test folder
+test_folders=Sys.glob('ReutersC50/C50test/*')
+#Getting all the file names in the sub-folders and making a vector with author names
+test_all_files=NULL
+test_labels=NULL
+for (x in test_folders) { 
+  ix = tail(unlist(gregexpr('C50test', x)), n=1)
+  author_name=substring(x,first=ix+8)
+  article=Sys.glob(paste0(x,'/*.txt'))
+  test_all_files=append(test_all_files,article)
+  test_labels=append(test_labels,rep(author_name,length(article)))
+}
+#Reading the files and removing .txt
+test_files_combined = lapply(test_all_files, readerPlain) 
+names(test_files_combined) = test_all_files
+#names(files_combined) = sub('.txt', '', names(files_combined))
+#Creating a text-mining corpus
+test_articles_raw = Corpus(VectorSource(test_files_combined))
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+##Pre-processing and tokenization
+test_documents = test_articles_raw %>%
+  tm_map(content_transformer(tolower))  %>%             # make everything lowercase
+  tm_map(content_transformer(removeNumbers)) %>%        # remove numbers
+  tm_map(content_transformer(removePunctuation)) %>%    # remove punctuation
+  tm_map(content_transformer(stripWhitespace))          # remove excess white-space
+
+#remove stop words
+test_documents = tm_map(test_documents, content_transformer(removeWords), stopwords("en"))
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+DTM_test=DocumentTermMatrix(test_documents,list(dictionary=colnames(DTM_train)))
+test_tf_idf_mat = weightTfIdf(DTM_test)
+DTM_test=as.matrix(test_tf_idf_mat) 
+DTM_train = DTM_train[,which(colSums(DTM_train) != 0)] 
+DTM_test = DTM_test[,which(colSums(DTM_test) != 0)]
+DTM_test_final = DTM_test[,intersect(colnames(DTM_test),colnames(DTM_train))]
+DTM_train_final = DTM_train[,intersect(colnames(DTM_test_final),colnames(DTM_train))]
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+pca = prcomp(DTM_train_final,scale=TRUE)
+plot(pca,type='line')
+writeLines('\n')
+var = apply(pca$x, 2, var)  
+prop = var/sum(var)
+plot(cumsum(pca$sdev^2/sum(pca$sdev^2)), xlab = '# of Principal Components', ylab = "Explained Variance")
+
+# Create datasets for modeling
+train_class = data.frame(pca$x[,1:400])
+train_class['author']=labels
+train_load = pca$rotation[,1:400]
+test_class = scale(DTM_test_final) %*% train_load
+test_class = as.data.frame(test_class)
+test_class['author']=test_labels
+```
+
+## Multi-label Classification models
+
+## KNN
+As a baseline, we perform KNN classification with K=10 from cross-validation, achieving 35.72%. The score is on the lower end considering we have a multi-label classification problem, i.e., the number of authors are huge.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+train_knn_y=as.factor(train_class$author)
+test_knn_y=as.factor(test_class$author)
+train_knn_x=subset(train_class, select=-c(author))
+test_knn_x=subset(test_class,select=-c(author))
+set.seed(1)
+knn=class::knn(train_knn_x,test_knn_x,train_knn_y,k=10)
+#prediction
+knn_calc=as.data.frame(cbind(knn,test_knn_y))
+knn_check=ifelse(as.integer(knn)==as.integer(test_knn_y),1,0)
+sum(knn_check)
+sum(knn_check)*100/nrow(knn_calc)
+```
+
+
+## Naive Bayes
+Naive Bayes improves the accuracy to 46.84%. The independent features assumption seems to fit well for this dataset.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+train_class$author=as.factor(train_class$author)
+test_class$author=as.factor(test_class$author)
+nb=naiveBayes(author~.,data=train_class)
+summary(nb)
+nb_predict=predict(nb,test_class)
+nb_check=as.data.frame(cbind(test_class$author,nb_predict))
+nb_check$mark=ifelse(nb_check$V1==nb_check$nb_predict,1,0)
+sum(nb_check$mark)*100/nrow(nb_check)
+```
+
+## Random Forest
+We obtained best performance using the Random Forest classifier where the accuracy rose to 70.6%. The runtime of the model is slightly more due to 400 feature set. However, the accuracy more than compensates for the high model training time.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(randomForest)
+set.seed(1)
+rf=randomForest(author~.,data=train_class, mtry=10)
+#prediction
+rf_predict=predict(rf,data=test_class)
+#calculating accuracy
+rf_check=as.data.frame(cbind(test_class$author,rf_predict))
+rf_check$mark=ifelse(rf_check$V1==rf_check$rf_predict,1,0)
+sum(rf_check$mark)*100/nrow(rf_check)
+```
+
+
+Conclusion
+Author attribution on this dataset is a fairly complex task since its difficult for most ML models to generate signal. This is evident from the low accuracy scores of majority of the classifiers. Ultimately, the Random Forest Classifier reigns supreme with a ~70% accuracy over the test set.
+
+For next steps, we recommend using a word embedding such as GloVe to further enrich text representation and boost accuracy. 
+
+
+We recommend using the 3 classification models are made and the most accurate model was found to be Random Forest with an accuracy of 70.6%.
+
+# Question 9: Association Rule Mining:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+prob_truthful <- 0.7
+prob_random <- 1 - prob_truthful
+prob_yes <- 0.65
+prob_no <- 0.35
+prob_of_yes_given_random <- 0.5
+prob_of_no_given_random <- 0.5
+prob_yes_and_random <- prob_random*prob_of_yes_given_random
+prob_of_yes_and_truthful <- prob_yes - prob_yes_and_random
+prob_of_yes_given_truthful <- prob_of_yes_and_truthful/prob_truthful
+cat('Fraction of people who answered yes given that they are truthful speakers:',prob_of_yes_given_truthful)
+cat('\nFraction of people who answered yes and are truthful speakers:',prob_of_yes_and_truthful)
+
+```
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+prob_of_postive_given_no_disease <- 0.0001
+#prob_of_negative_given_no_disease <- 0.9999
+prob_of_postive_given_disease <- 0.993
+
+#rule of total prob
+#prob_of_positive <- prob_of_postive_given_no_disease+ prob_of_postive_given_disease
+prob_of_disease <- 0.000025
+prob_of_no_disease <- 1 - prob_of_disease
+
+prob_of_disease_given_positive <- (prob_of_postive_given_disease*prob_of_disease)/((prob_of_postive_given_disease*prob_of_disease)+(prob_of_no_disease*prob_of_postive_given_no_disease))
+cat('Probability of having the disease given they test positive:',prob_of_disease_given_positive)
+```
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(igraph)
+library(arules)
+library(arulesViz)
+
+grocery = read.transactions('groceries.txt', sep = ",", header = F)
+dim(grocery)
+inspect(grocery[1:5,])
+```
+
+Getting and plotting Item Frequency:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+itemFrequency(grocery[, 1:15])
+
+#get the item frequency bar plot with a support of 0.05
+itemFrequencyPlot(grocery, support = 0.05)
+
+```
+
+Relative itemFrequency is highest for whole milk.
+
+##  Apriori
+Now we run the Apriori algorithm.
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Run the apriori algorithm
+groceryrules = apriori(grocery,
+                  parameter=list(support=.005,confidence=.2, maxlen=4))
+```
+Inspecting the first 10 rules:
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+inspect(groceryrules[1:10,])
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+cat('Inspecting grocery rules with lift>4')
+inspect(subset(groceryrules, subset=lift > 4))
+
+cat('Inspecting top 10 grocery rules with confidence>0.3')
+inspect(subset(groceryrules, subset=confidence > 0.3)[1:10,])
+
+cat('Inspecting grocery rules with confidence>0.2 and lift>2')
+subset(groceryrules, subset=lift > 2 & confidence > 0.2)
+```
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+groceryrules1=subset(groceryrules, subset=lift > 2 & confidence > 0.2)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+cat('Inspecting top 10 grocery rules sorted by lift')
+inspect(sort(groceryrules1, by='lift')[1:10,])
+```
+
+## Visualizing Apriori
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+plot(groceryrules1)
+```
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+cat('Graph Plot for grocery rules')
+plot(head(groceryrules1, 10, by='lift'), method='graph')
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# can swap the axes and color scales
+plot(groceryrules1, measure = c("support", "lift"), shading = "confidence")
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+cat('Inspecting top 10 grocery rules with support > 0.01')
+inspect(subset(groceryrules1, support > 0.01)[1:10,])
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+cat('Inspecting top 10 grocery rules  where rhs is yogurt sorted by lift')
+inspect(sort(subset(groceryrules1, rhs %in% "yogurt"), by="lift")[1:10])
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+cat('Inspecting top 10 grocery rules  where rhs is root vegetables sorted by lift')
+inspect(sort(subset(groceryrules1, rhs %in% "root vegetables"), by="lift")[1:10])
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+cat('Inspecting top 10 grocery rules  where rhs is butter sorted by lift')
+inspect(sort(subset(groceryrules1, rhs %in% "butter"), by="lift"))
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+cat('Inspecting top 10 grocery rules  where rhs is sausage sorted by lift')
+inspect(sort(subset(groceryrules1, rhs %in% "sausage"), by="lift")[1:10,])
+```
+
+We run the Apriori algorithm for multiple thresholds of lift and confidence. Selecting a value of lift above 4 gives us only two rules, while selecting only a confidence of >0.3 gives us 481 rules.
+
+After multiple iterations, finally we select the values of lift and confidence as lift > 2 & confidence > 0.2 as this gave us sufficient number of rules with a reasonable value of confidence.
+
+People who buy citrus fruits and root vegetables are more likely to buy tropical fruits, therefore it would be ideal to have them placed in the same corner.
+
+Yogurt  has a high lift value with fruit juices and vegetables. So the dairy section should ideally have the fruit section right next to it.
+
+Even butter should be placed alongside the rest of the dairy products, as per the high lift value.
+
+Root vegetables has a high lift value with other fruits and vegetables, so they can be placed together. This makes sense since most people shop for their vegetables and fruits together.
+
+Sausage achieves a high lift with snacks like items like rolls/buns and sliced cheese and also with soda, so it makes sense to have a promotional discount clubbing the two items together. Somehow it has a high lift >2 with shopping bags.
+
+
