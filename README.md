@@ -1,4 +1,4 @@
- # STA 380, Part 2: Exercises 
+ # STA 380 Intro to ML, Part 2: Exercises 
 
 Due: by end of the working day (5:00 PM US Central time) on Monday, August 15.
 
